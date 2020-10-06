@@ -1,2 +1,3 @@
 output_images
+__pycache__
 *.log

@@ -11,8 +11,10 @@
             "request": "launch",
             "program": "${file}",
             "console": "integratedTerminal",
+            "args": ["test_videos//challenge.mp4", "-c", "pipeline-config.json", "--debug"]
+            // "args": ["test_videos//solidYellowLeft.mp4", "-c", "pipeline-config.json", "--debug"]
             // "args": ["test_images//challenge_Moment_1.jpg"]
-            "args": ["test_images//challenge_Moment_1.jpg", "-c", "pipeline-config.json", "--debug"]
+            // "args": ["test_images//challenge_Moment_1.jpg", "-c", "pipeline-config.json", "--debug"]
             //"args": ["-h"]
         }
     ]

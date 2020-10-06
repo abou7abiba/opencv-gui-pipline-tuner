@@ -1,3 +1,8 @@
+import logging
+
+# create logger
+logger = logging.getLogger(__name__)
+
 import numpy as np
 import cv2
 import os
@@ -13,19 +18,30 @@ class ImageProcessor:
         self._on_image_change = on_image_change
         self._processed_image = None
         self._win_Ctrl = 'Controls'
+        self._pipline = None
 
 
     def __str__( self ) :
         return "( " + "name: " + str( self._name ) + ", " + str(self._config) + ")\n"
 
     def onImageChange(self, image_processor):
-        self.image = image_processor.processedImage()
+        self.setImage(image_processor.processedImage())
+
+    def setImage (self, image):
+        self.image = image
         self._ysize = self.image.shape[0]
         self._xsize = self.image.shape[1]
         self.refresh()
 
+    """
+    This actually means adding the method onImageChange as a callback
+    to be called when an image change happend.
+    """
     def addProcessor (self, image_processor):
         self._on_image_change = image_processor
+
+    def setPipeline (self, pipeline):
+        self._pipline = pipeline
 
     def onCloseWindow(self):
         cv2.destroyWindow(self._name)
@@ -380,9 +396,67 @@ class HoughLines (ImageProcessor):
         """
         for line in lines:
             for x1,y1,x2,y2 in line:
-                cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+                try:
+                    cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+                except:
+                    logger.debug ("Draw line failed, x1, y1: %s, %s - x2, y2: %s, %s", x1, y1, x2, y2)
 
-    def draw_lane(self, img, lines, color=[255, 0, 0]):
+    def get_line (self, lines, left_line = True):
+        """
+        NOTE: this is the function you might want to use as a starting point once you want to 
+        average/extrapolate the line segments you detect to map out the full
+        extent of the lane (going from the result shown in raw-lines-example.mp4
+        to that shown in P1_example.mp4).  
+        
+        Think about things like separating line segments by their 
+        slope ((y2-y1)/(x2-x1)) to decide which segments are part of the left
+        line vs. the right line.  Then, you can average the position of each of 
+        the lines and extrapolate to the top and bottom of the lane.
+        
+        This function draws `lines` with `color` and `thickness`.    
+        Lines are drawn on the image inplace (mutates the image).
+        If you want to make the lines semi-transparent, think about combining
+        this function with the weighted_img() function below
+        """
+        x_points = [] # x_points[0] will present the left line while x_points[1] is the right line
+        y_points = [] # y_points[0] will present the left line while y_points[1] is the right line
+        x_points.append([])
+        y_points.append([])
+        
+        ysize = self._ysize
+        xsize = self._xsize
+
+        for line in lines:
+            for x1,y1,x2,y2 in line:
+                slop = (y2-y1)/(x2-x1)
+                if left_line and slop < 0 and x1 < xsize/2 and x2 < xsize/2 : # -ve slop is left line
+                    x_points[0].append (x1)
+                    x_points[0].append (x2)
+                    y_points[0].append (y1)
+                    y_points[0].append (y2)
+                elif not left_line and slop >= 0 and x1 >= xsize/2 and x2 >= xsize/2 : # +ve slop is right line
+                    x_points[0].append (x1)
+                    x_points[0].append (x2)
+                    y_points[0].append (y1)
+                    y_points[0].append (y2)
+        
+        # Identify left line
+        line = None
+        x = np.array(x_points[0])
+        y = np.array(y_points[0])
+        if len(x) > 0 and len (y) > 0:
+            line_fit = np.polyfit(x, y, 1)
+        
+            # y = mx + c 
+            # x = (y - c)/m 
+            # So we get x at the point in the image = ysize -1 to draw complete lines
+            m, c = line_fit
+            line = np.array([int((ysize -1 -c)/m), ysize -1, int((min(y) -c)/m), min(y)])
+        
+        return line
+
+
+    def draw_lane_copy (self, img, lines, color=[255, 0, 0]):
         """
         NOTE: this is the function you might want to use as a starting point once you want to 
         average/extrapolate the line segments you detect to map out the full
@@ -456,6 +530,38 @@ class HoughLines (ImageProcessor):
         self.draw_lines (img, lane_lines, color, self.lineThickness())
     
     
+    def draw_lane(self, img, lines, color=[255, 0, 0]):
+        """
+        NOTE: this is the function you might want to use as a starting point once you want to 
+        average/extrapolate the line segments you detect to map out the full
+        extent of the lane (going from the result shown in raw-lines-example.mp4
+        to that shown in P1_example.mp4).  
+        
+        Think about things like separating line segments by their 
+        slope ((y2-y1)/(x2-x1)) to decide which segments are part of the left
+        line vs. the right line.  Then, you can average the position of each of 
+        the lines and extrapolate to the top and bottom of the lane.
+        
+        This function draws `lines` with `color` and `thickness`.    
+        Lines are drawn on the image inplace (mutates the image).
+        If you want to make the lines semi-transparent, think about combining
+        this function with the weighted_img() function below
+        """
+        lane_lines = np.empty([0, 1, 4], dtype=int)
+        left_line = self.get_line (lines, left_line = True)
+
+        if left_line is not None:
+            lane_lines = np.append (lane_lines, [[left_line]], axis=0)
+
+        right_line = self.get_line (lines, left_line = False)
+        if right_line is not None:
+            lane_lines = np.append (lane_lines, [[right_line]], axis=0)
+
+         
+        #logger.debug('lane lines are : %s', lane_lines)
+        
+        self.draw_lines (img, lane_lines, color, self.lineThickness())
+
     def _render(self):
         cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
 
@@ -467,8 +573,9 @@ class HoughLines (ImageProcessor):
         lines = cv2.HoughLinesP(self.image, self.rho(), self.theta(), self.threshold(), np.array([]),
                                     self.minLineLength(), self.maxLineGap())
 
-        self.draw_lines(line_imge, lines)
-        self.draw_lane (line_imge, lines)
+        if lines is not None:
+            self.draw_lines(line_imge, lines)
+            self.draw_lane (line_imge, lines)
 
         #Fix the colors
         r, g, b = cv2.split (line_imge)
@@ -520,14 +627,18 @@ class ImageBlender (ImageProcessor):
     def gamma(self):
         return self.getParameter('gamma')
 
+    def setBaseImage (self, base_image):
+        self._base_image = base_image
+
     def setConfig (self, config):
        self._config = config
        for key in config:
         cv2.setTrackbarPos(key, self._win_Ctrl, int (config[key] * 10))     
 
     def _render(self):
+        base_image = self._pipline.getImage()
         cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
 
-        self._processed_image = cv2.addWeighted(self._base_image, self.alpha(), self.image, self.beta(), self.gamma())
+        self._processed_image = cv2.addWeighted(base_image, self.alpha(), self.image, self.beta(), self.gamma())
         cv2.imshow(self._name, self._processed_image)
 
