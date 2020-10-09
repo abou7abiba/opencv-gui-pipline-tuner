@@ -120,7 +120,7 @@ example to process a single image as following
 (carnd-term1-38) opencv-gui-pipline-tuner> python .\video_find_lanes_pipeline.py .\test_videos\solidYellowLeft.mp4 -c .\output_images\challenge_Moment_1-config.json -o .\output_videos\
 ```
 
-so this command will process the image file `.\test_videos\solidYellowLeft.mp4` with the given config files `-c .\output_images\challenge_Moment_1-config.json` and the new modified configurationparameters will be saved in a JSON file under the folder `-o .\output_images\`
+so this command will process the image file `.\test_videos\solidYellowLeft.mp4` with the given config files `-c .\output_images\challenge_Moment_1-config.json` and the new modified configurationparameters will be saved in a JSON file under the folder `-o .\output_videos\`
 
 [1]: https://medium.com/@maunesh/finding-the-right-parameters-for-your-computer-vision-algorithm-d55643b6f954
 
