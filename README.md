@@ -8,6 +8,8 @@ The steps are color selection, region of interest selection, grayscaling, Gaussi
 
 I started from this tool and built on the idea to have a GUI for tuning each step of the pipeline and you can even build your own pipeline.
 
+Here is a [video to explain the tool][2]
+
 ## The Design
 The highlevel design diagram for the tool is depending on constructing a pipeline of different processors. Each processor is having an image as input and image as output. The input of one processor is the output of the previous processor of the chain as explained in the diagram below:
 ![the pipline diagram](doc_images/Find_Lane_Pipeline.png)
@@ -124,3 +126,4 @@ so this command will process the image file `.\test_videos\solidYellowLeft.mp4` 
 
 [1]: https://medium.com/@maunesh/finding-the-right-parameters-for-your-computer-vision-algorithm-d55643b6f954
 
+[2]: https://www.youtube.com/watch?v=2lXASeCWpMs
