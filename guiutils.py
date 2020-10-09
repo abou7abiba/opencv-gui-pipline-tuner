@@ -87,7 +87,7 @@ class ImageProcessor:
 #       SmoothImage
 ###################################
 class SmoothImage (ImageProcessor):
-    def __init__(self, name, image, on_image_change=None, average_filter_size=3, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1):
+    def __init__(self, name, image=None, on_image_change=None, average_filter_size=3, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1):
         
         super().__init__(name, image, on_image_change)
 
@@ -157,7 +157,7 @@ class SmoothImage (ImageProcessor):
 #       EdgeFinder
 ###################################
 class EdgeFinder (ImageProcessor):
-    def __init__(self, name, image, on_image_change=None, min_threshold=71, max_threshold=163):
+    def __init__(self, name, image=None, on_image_change=None, min_threshold=71, max_threshold=163):
         super().__init__(name, image, on_image_change)
         super().__init__(name, image, on_image_change)
 
@@ -194,7 +194,7 @@ class EdgeFinder (ImageProcessor):
 #       RegionMask
 ###################################
 class RegionMask (ImageProcessor):
-    def __init__(self, name, image, on_image_change=None, x_up=0.06, x_bottom=0.42, y_up=0.4, y_bottom=0):
+    def __init__(self, name, image=None, on_image_change=None, x_up=0.06, x_bottom=0.42, y_up=0.4, y_bottom=0):
         super().__init__(name, image, on_image_change)
 
         self.setParameter('x_up', x_up)
@@ -306,7 +306,7 @@ class RegionMask (ImageProcessor):
 #       HoughLines
 ###################################
 class HoughLines (ImageProcessor):
-    def __init__(self, name, image, on_image_change=None, rho=1, theta=1, threshold=7, \
+    def __init__(self, name, image=None, on_image_change=None, rho=1, theta=1, threshold=7, \
                             min_line_length = 4, max_line_gap = 47, line_thickness = 2):
                             
         super().__init__(name, image, on_image_change)
@@ -349,7 +349,8 @@ class HoughLines (ImageProcessor):
             self.setParameter('line_thickness', pos)
             self.refresh()
 
-        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
+        # cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
+        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_AUTOSIZE)
 
         cv2.createTrackbar('rho', self._win_Ctrl, rho, 10, onchangeRho)
         cv2.createTrackbar('theta', self._win_Ctrl, theta, 45, onchangeTheta)
@@ -397,7 +398,8 @@ class HoughLines (ImageProcessor):
         for line in lines:
             for x1,y1,x2,y2 in line:
                 try:
-                    cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+                    if thickness > 0:
+                        cv2.line(img, (x1, y1), (x2, y2), color, thickness)
                 except:
                     logger.debug ("Draw line failed, x1, y1: %s, %s - x2, y2: %s, %s", x1, y1, x2, y2)
 
@@ -454,81 +456,7 @@ class HoughLines (ImageProcessor):
             line = np.array([int((ysize -1 -c)/m), ysize -1, int((min(y) -c)/m), min(y)])
         
         return line
-
-
-    def draw_lane_copy (self, img, lines, color=[255, 0, 0]):
-        """
-        NOTE: this is the function you might want to use as a starting point once you want to 
-        average/extrapolate the line segments you detect to map out the full
-        extent of the lane (going from the result shown in raw-lines-example.mp4
-        to that shown in P1_example.mp4).  
-        
-        Think about things like separating line segments by their 
-        slope ((y2-y1)/(x2-x1)) to decide which segments are part of the left
-        line vs. the right line.  Then, you can average the position of each of 
-        the lines and extrapolate to the top and bottom of the lane.
-        
-        This function draws `lines` with `color` and `thickness`.    
-        Lines are drawn on the image inplace (mutates the image).
-        If you want to make the lines semi-transparent, think about combining
-        this function with the weighted_img() function below
-        """
-        x_points = [] # x_points[0] will present the left line while x_points[1] is the right line
-        x_points.append([])
-        x_points.append([])
-        y_points = [] # y_points[0] will present the left line while y_points[1] is the right line
-        y_points.append([])
-        y_points.append([])
-        
-        ysize = self._ysize
-        xsize = self._xsize
-
-        for line in lines:
-            for x1,y1,x2,y2 in line:
-                slop = (y2-y1)/(x2-x1)
-                if slop < 0 and x1 < xsize/2 and x2 < xsize/2 : # -ve slop is left line
-                    x_points[0].append (x1)
-                    x_points[0].append (x2)
-                    y_points[0].append (y1)
-                    y_points[0].append (y2)
-                elif slop >= 0 and x1 >= xsize/2 and x2 >= xsize/2 : # +ve slop is right line
-                    x_points[1].append (x1)
-                    x_points[1].append (x2)
-                    y_points[1].append (y1)
-                    y_points[1].append (y2)
-        
-        # Identify left line
-        x = np.array(x_points[0])
-        y = np.array(y_points[0])
-        line_fit = np.polyfit(x, y, 1)
-        
-        # y = mx + c 
-        # x = (y - c)/m 
-        # So we get x at the point in the image = ysize -1 to draw complete lines
-        m, c = line_fit
-        left_line = np.array([int((ysize -1 -c)/m), ysize -1, int((min(y) -c)/m), min(y)])
-        
-        #f = np.poly1d(line_fit)                 
-        #left_line = np.array([min(x), int(f(min(x))), max(x), int(f(max(x)))])
-        # logger.debug('left line segments are \n x: %s \n y: %s \n and line is \n %s', x, y, left_line)
-        
-        # Identify right line
-        x = np.array(x_points[1])
-        y = np.array(y_points[1])
-        line_fit = np.polyfit(x, y, 1)
-        
-        m, c = line_fit
-        right_line = np.array([int((ysize -1 -c)/m), ysize -1, int((min(y) -c)/m), min(y)])
-
-        #f = np.poly1d(line_fit)                 
-        #right_line = np.array ([min(x), int(f(min(x))), max(x), int(f(max(x)))])
-        #logger.debug('right line segments are \n x: %s \n y: %s \n and line is \n %s', x, y, right_line)
-        
-        lane_lines = np.array([[left_line, right_line]]) 
-        #logger.debug('lane lines are : %s', lane_lines)
-        
-        self.draw_lines (img, lane_lines, color, self.lineThickness())
-    
+   
     
     def draw_lane(self, img, lines, color=[255, 0, 0]):
         """
@@ -588,7 +516,7 @@ class HoughLines (ImageProcessor):
 #       ImageBlender
 ###################################
 class ImageBlender (ImageProcessor):
-    def __init__(self, name, image, base_image, on_image_change=None, alpha=0.8, beta=1, gamma=0):
+    def __init__(self, name, image=None, base_image=None, on_image_change=None, alpha=0.8, beta=1, gamma=0):
         super().__init__(name, image, on_image_change)
 
         self.setParameter('alpha', alpha)

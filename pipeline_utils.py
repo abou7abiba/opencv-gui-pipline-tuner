@@ -16,18 +16,13 @@ from guiutils import *
 
 class ImageProcessorPipeline:
 
-    def __init__(self, name, image_filename, out_folder, config_file):
+    def __init__(self, name, in_filename, out_folder, config_file):
         self._name = name
-        self._image_filename = image_filename
+        self._in_filename = in_filename
         self._out_folder = out_folder
         self._config_file = config_file
         self._processors = []
         self._config = self.loadConfig ()
-
-        cv2.namedWindow('input', cv2.WINDOW_KEEPRATIO)
-        self.image = cv2.imread(image_filename)   
-        cv2.imshow('input', self.image)
-
 
     def __str__( self ) :
         return "( " + "name: " + str( self._name ) + ", " + str(self.getConfig()) + ")\n"
@@ -47,9 +42,9 @@ class ImageProcessorPipeline:
 
 
     def saveConfig(self):
-        (head, tail) = os.path.split(self._image_filename)
+        (head, tail) = os.path.split(self._in_filename)
         (root, ext) = os.path.splitext(tail)
-        out_filename = os.path.join(self._out_folder, root + '.json')
+        out_filename = os.path.join(self._out_folder, root + '-config' + '.json')
 
         config = self.getConfig()
         with open(out_filename, 'w', encoding='utf-8') as out_file:
@@ -82,7 +77,7 @@ class ImageProcessorPipeline:
 
     def saveProcessedImages(self):
         for processor in self._processors:
-            processor.saveProcessedImage(self._image_filename, self._out_folder)
+            processor.saveProcessedImage(self._in_filename, self._out_folder)
             
     def save(self):
         self.saveProcessedImages()
@@ -101,63 +96,60 @@ class ImageProcessorPipeline:
 
 class FindLanesPipeline (ImageProcessorPipeline):
 
-    def __init__(self, name, image_filename, out_folder, config_file):
+    def __init__(self, name, in_filename, out_folder, config_file):
 
-        super().__init__(name, image_filename, out_folder, config_file)
+        super().__init__(name, in_filename, out_folder, config_file)
 
-        blur_image = SmoothImage('Bluring Config', self.image, average_filter_size=5, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1)
-        self.addProcessor (blur_image)
-
-        edge_finder = EdgeFinder('Edge Finder Config', blur_image.processedImage(), min_threshold=28, max_threshold=115)
-        self.addProcessor (edge_finder)
-        
-        region_mask = RegionMask('Region Masked dimensions', edge_finder.processedImage())
-        self.addProcessor (region_mask)
-        
-        hough_lines = HoughLines('Hough Lines Config', region_mask.processedImage())
-        self.addProcessor (hough_lines)
-        
-        image_blender = ImageBlender('Image Mix Config', hough_lines.processedImage(), self.image)
-        self.addProcessor (image_blender)
+        self.addProcessor (SmoothImage('Bluring Config', average_filter_size=5, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1))
+        self.addProcessor (EdgeFinder('Edge Finder Config', min_threshold=28, max_threshold=115))
+        self.addProcessor (RegionMask('Region Masked dimensions'))
+        self.addProcessor (HoughLines('Hough Lines Config'))        
+        self.addProcessor (ImageBlender('Image Mix Config'))
 
         if self._config:
             self.setConfig(self._config)
 
-        self.refresh()
+    def processImage (self):
+        cv2.namedWindow('input', cv2.WINDOW_KEEPRATIO)
+
+        image = cv2.imread(self._in_filename)
+        if image is not None:   
+            cv2.imshow('input', image)
+            self.setImage(image)
+        else:
+            raise AttributeError ("input file is not an image file", self._in_filename)
+        
+
 
 class VideoProcessorPipeline (ImageProcessorPipeline):
 
-    def __init__(self, name, video_filename, out_folder, config_file):
+    def __init__(self, name, in_filename, out_folder, config_file):
+
+        super().__init__(name, in_filename, out_folder, config_file)
         self._name = name
-        self.image = None
-        self._video_filename = video_filename
+        self._in_filename = in_filename
         self._out_folder = out_folder
         self._config_file = config_file
         self._processors = []
         self._config = self.loadConfig ()
+        
         self._speed = 25
-
-        # cv2.namedWindow('input', cv2.WINDOW_KEEPRATIO)
-        # self.image = cv2.imread(image_filename)   
-        # cv2.imshow('input', self.image)
-
-        blur_image = SmoothImage('Bluring Config', self.image, average_filter_size=5, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1)
-        self.addProcessor (blur_image)
-
-        edge_finder = EdgeFinder('Edge Finder Config', blur_image.processedImage(), min_threshold=28, max_threshold=115)
-        self.addProcessor (edge_finder)
-        
-        region_mask = RegionMask('Region Masked dimensions', edge_finder.processedImage())
-        self.addProcessor (region_mask)
-        
-        hough_lines = HoughLines('Hough Lines Config', region_mask.processedImage())
-        self.addProcessor (hough_lines)
-        
-        image_blender = ImageBlender('Image Mix Config', hough_lines.processedImage(), self.image)
-        self.addProcessor (image_blender)
+         
+        self.addProcessor (SmoothImage('Bluring Config', average_filter_size=5, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1))
+        self.addProcessor (EdgeFinder('Edge Finder Config', min_threshold=28, max_threshold=115))
+        self.addProcessor (RegionMask('Region Masked dimensions'))
+        self.addProcessor (HoughLines('Hough Lines Config'))        
+        self.addProcessor (ImageBlender('Image Mix Config'))
 
         if self._config:
             self.setConfig(self._config)
+
+    def save(self):
+        """
+        Override the normal save method that saves the intermediate images to 
+        only save the configuration file.
+        """
+        self.saveConfig()
 
     def videoCapture (self):
 
@@ -181,7 +173,7 @@ class VideoProcessorPipeline (ImageProcessorPipeline):
                 break
     
     def __enter__(self): 
-        self.cap = cv2.VideoCapture(self._video_filename)
+        self.cap = cv2.VideoCapture(self._in_filename)
         return self
   
     def __exit__(self, exception_type, exception_value, traceback):

@@ -58,7 +58,8 @@ def main():
     logger.debug("arguments are: %s", args)
 
     pipeline = FindLanesPipeline ('Find Lanes Pipeline', args.filename, args.output_folder, args.config_file)
-
+    pipeline.processImage()
+    
     cv2.waitKey(0)
 
     print ("Adjust the parameters as desired.  Hit any key to close. Your configuration will be in Tuning_info_out.log")

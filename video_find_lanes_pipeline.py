@@ -52,7 +52,7 @@ def main():
     parser.add_argument('-d', '--debug', action="store_true", help="Enable the debug mode for logging debug statements." )
 
     args = parser.parse_args()
-
+    logger.info ("Press q to Exit")
 
     __init_logger(args.debug)
     logger.debug("arguments are: %s", args)
@@ -62,9 +62,9 @@ def main():
 
     cv2.waitKey(0)
 
-    print ("Adjust the parameters as desired.  Hit any key to close. Your configuration will be in Tuning_info_out.log")
+    print ("Adjust the parameters as desired.  Hit q key to close.")
 
-    # videoPipeline.save()
+    videoPipeline.save()
 
     logger.info("Configuration parameters:\n %s ", videoPipeline)
     logger.debug("Configuration parameters:\n %s ", videoPipeline)

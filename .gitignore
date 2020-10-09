@@ -1,3 +1,6 @@
 output_images
+output_videos
+noarch
 __pycache__
 *.log
+*.html
