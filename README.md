@@ -102,7 +102,7 @@ You can identify the intial configuration and pass it to the tool to load it fro
 
 We have two ways to use this tool
 
-### process a single image
+### **process a single image**
 
 example to process a single image as following
 
@@ -112,12 +112,12 @@ example to process a single image as following
 
 so this command will process the image file `.\test_images\solidYellowLeft.jpg` with the given config files `-c .\output_images\challenge_Moment_1-config.json` and the new modified configurationparameters will be saved in a JSON file under the folder `-o .\output_images\`
 
-### process a video
+### **process a video**
 
 example to process a single image as following
 
 ```
-(carnd-term1-38) opencv-gui-pipline-tuner> python .\video_find_lanes_pipeline.py .\test_videos\solidYellowLeft.mp4 -c .\output_images\challenge_Moment_1-config.json -o .\output_images\
+(carnd-term1-38) opencv-gui-pipline-tuner> python .\video_find_lanes_pipeline.py .\test_videos\solidYellowLeft.mp4 -c .\output_images\challenge_Moment_1-config.json -o .\output_videos\
 ```
 
 so this command will process the image file `.\test_videos\solidYellowLeft.mp4` with the given config files `-c .\output_images\challenge_Moment_1-config.json` and the new modified configurationparameters will be saved in a JSON file under the folder `-o .\output_images\`
