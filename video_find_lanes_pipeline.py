@@ -33,11 +33,12 @@ logger = logging.getLogger(__name__)
 def __init_logger(debug = False):
     #Set level to logging.DEBUG to see CRITICAL, ERROR, WARNING, INFO and DEBUG statements
     #Set level to logging.ERROR to see the CRITICAL & ERROR statements only
-    logger.setLevel(logging.DEBUG)
 
     debugLevel = logging.ERROR
     if debug:
         debugLevel = logging.DEBUG
+
+    logger.setLevel(debugLevel)
 
     for handler in logger.handlers:
         if type(handler) is logging.StreamHandler:

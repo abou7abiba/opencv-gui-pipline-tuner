@@ -60,14 +60,18 @@ class ImageProcessorPipeline:
 
     def setConfig (self, config):
         for processor in self._processors:
-            processor.setConfig (config[type(processor).__name__])
+            try:
+                processor.setConfig (config[type(processor).__name__])
+            except KeyError as err:
+                logger.warning("configuration of processor %s not found", processor.name())
+            
 
-    def setImage (self, image):
+    def setImage (self, image, image_info=None):
         """
         This method will call the setImage of the first processor which in turn will 
         set the input image and call refresh for the rest of the chain
         """
-        self._processors[0].setImage(image) 
+        self._processors[0].setImage(image, image_info) 
 
     def getImage (self):
         """
@@ -135,6 +139,7 @@ class VideoProcessorPipeline (ImageProcessorPipeline):
         
         self._speed = 25
          
+        self.addProcessor(OriginalImage('Original Image'))
         self.addProcessor (SmoothImage('Bluring Config', average_filter_size=5, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1))
         self.addProcessor (EdgeFinder('Edge Finder Config', min_threshold=28, max_threshold=115))
         self.addProcessor (RegionMask('Region Masked dimensions'))
@@ -154,24 +159,49 @@ class VideoProcessorPipeline (ImageProcessorPipeline):
     def videoCapture (self):
 
         frame_counter = 0
+        WAIT_INTERVAL = 10
+        wait_time = self._speed
+        frame_max_count = self.cap.get(cv2.CAP_PROP_FRAME_COUNT)
+        image_info ={'file': self._in_filename, 'frame':0, 'frames_num': frame_max_count, 'wait_time':wait_time}
 
         # Iterate while the cap is open, i.e. while we still get new frames.
         while(self.cap.isOpened()):
             ret, frame = self.cap.read()
 
             frame_counter += 1
+            
             #If the last frame is reached, reset the capture and the frame_counter
-            if frame_counter == self.cap.get(cv2.CAP_PROP_FRAME_COUNT):
+            if frame_counter == frame_max_count:
                 frame_counter = 0 #Or whatever as long as it is the same as next line
                 self.cap.set(cv2.CAP_PROP_POS_FRAMES, frame_counter)
             
-            self.setImage (frame)
+            image_info ['frame'] = frame_counter
+            image_info ['wait_time'] = wait_time
+            self.setImage (frame, image_info)
             # gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
 
             # cv2.imshow('frame',gray)
-            if cv2.waitKey(self._speed) & 0xFF == ord('q'):
+            key = cv2.waitKey(wait_time)
+            if key & 0xFF == ord('q'):
                 break
-    
+
+            elif key & 0xFF == ord('s'):
+                cv2.waitKey(0)  
+            
+            elif key & 0xFF == ord('f'):
+                wait_time = wait_time - WAIT_INTERVAL
+                if wait_time <= 0:
+                    wait_time = 1 
+
+            elif key & 0xFF == ord('d'):
+                wait_time = wait_time + WAIT_INTERVAL 
+
+            elif key & 0xFF == ord('a'):
+                wait_time = self._speed
+
+            elif key > 0: # Any other key
+                logger.info ('Press key as follows - q:quite - s:stop video - f:faster video by 10 ms - d: slower video by 10ms - a: normal speed') 
+
     def __enter__(self): 
         self.cap = cv2.VideoCapture(self._in_filename)
         return self

@@ -11,8 +11,9 @@ import os
 #       ImageProcessor
 ###################################
 class ImageProcessor:
-    def __init__(self, name, image=None, on_image_change=None):
+    def __init__(self, name, image=None, image_info = None, on_image_change=None):
         self._name = name
+        self._image_info = image_info
         self._config = {}
         self.image = image
         self._on_image_change = on_image_change
@@ -25,10 +26,20 @@ class ImageProcessor:
         return "( " + "name: " + str( self._name ) + ", " + str(self._config) + ")\n"
 
     def onImageChange(self, image_processor):
-        self.setImage(image_processor.processedImage())
+        self.setImage(image_processor.processedImage(), image_processor.imageInfo())
 
-    def setImage (self, image):
+    def setWinControl (self, win_ctrl_name):
+        self._win_Ctrl = win_ctrl_name
+        # we either use WINDOW_NORMAL or WINDOW_AUTOSIZE
+        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
+
+    def setWindow (self, win_name):
+        # We use WINDOW_KEEPRATIO for image window.
+        cv2.namedWindow(win_name, cv2.WINDOW_KEEPRATIO)
+
+    def setImage (self, image, image_info = None):
         self.image = image
+        self._image_info = image_info
         self._ysize = self.image.shape[0]
         self._xsize = self.image.shape[1]
         self.refresh()
@@ -49,6 +60,9 @@ class ImageProcessor:
     def processedImage (self):
         return self._processed_image
 
+    def imageInfo (self):
+        return self._image_info
+
     def name (self):
         return self._name
 
@@ -56,10 +70,14 @@ class ImageProcessor:
        pass
 
     def setParameter(self, name, value):
-       self._config [name] = value
+        if self._config is not None:
+            self._config [name] = value
 
     def getParameter (self, name):
-        return self._config [name]
+        if self._config is not None:
+            return self._config [name]
+        else:
+            return None
 
     def configuration(self):
         return self._config
@@ -82,6 +100,22 @@ class ImageProcessor:
         # to force refresh to following Processors
         if self._on_image_change and callable(self._on_image_change):
             self._on_image_change(self)
+
+###################################
+#       OriginalImage
+###################################
+class OriginalImage (ImageProcessor):
+    def __init__(self, name, image=None, on_image_change=None):
+        
+        super().__init__(name, image, on_image_change)
+
+        
+    def _render(self):
+        # Convert it to Grayscale
+        self.setWindow(self._name)
+
+        self._processed_image = self.image    
+        cv2.imshow(self._name, self._processed_image)
 
 ###################################
 #       SmoothImage
@@ -119,17 +153,14 @@ class SmoothImage (ImageProcessor):
             filter_size += (filter_size + 1) % 2    # make sure the filter size is odd
             self.setParameter('bilateral_filter_size', filter_size)
             self.refresh()
-
-        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
-
+        
+        self.setWinControl(self._name + " " + self._win_Ctrl)
+        
         cv2.createTrackbar('average_filter_size', self._win_Ctrl, self.getParameter('average_filter_size'), 20, onchangeAvgFltrSz)
         cv2.createTrackbar('gaussian_filter_size', self._win_Ctrl, self.getParameter('gaussian_filter_size'), 20, onchangeGaussFltrSz)
         cv2.createTrackbar('median_filter_size', self._win_Ctrl, self.getParameter('median_filter_size'), 20, onchangeMdnFltrSz)
         cv2.createTrackbar('bilateral_filter_size', self._win_Ctrl, self.getParameter('bilateral_filter_size'), 20, onchangeBltrlFltrSz)
         
-        #self._render()
-
-
     def averageFilterSize(self):
         return self.getParameter('average_filter_size')
 
@@ -144,7 +175,8 @@ class SmoothImage (ImageProcessor):
         
     def _render(self):
         # Convert it to Grayscale
-        cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
+        self.setWindow(self._name)
+
         self._blurred_image = cv2.cvtColor(self.image, cv2.COLOR_RGB2GRAY)
         self._blurred_image = cv2.blur(self._blurred_image, (self.averageFilterSize(), self.averageFilterSize()))
         self._blurred_image = cv2.GaussianBlur(self._blurred_image, (self.gaussianFilterSize(), self.gaussianFilterSize()), 0)
@@ -172,12 +204,10 @@ class EdgeFinder (ImageProcessor):
             self.setParameter('max_threshold', pos)
             self.refresh()
 
-        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
+        self.setWinControl(self._name + " " + self._win_Ctrl)
 
         cv2.createTrackbar('min_threshold', self._win_Ctrl, min_threshold, 255, onchangeThreshold1)
         cv2.createTrackbar('max_threshold', self._win_Ctrl, max_threshold, 255, onchangeThreshold2)
-
-        #self._render()
 
     def min_threshold(self):
         return self.getParameter('min_threshold')
@@ -186,7 +216,8 @@ class EdgeFinder (ImageProcessor):
         return self.getParameter('max_threshold')
 
     def _render(self):
-        cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
+        self.setWindow(self._name)
+
         self._processed_image = cv2.Canny(self.image, self.min_threshold(), self.max_threshold())
         cv2.imshow(self._name, self._processed_image)
 
@@ -218,15 +249,12 @@ class RegionMask (ImageProcessor):
             self.setParameter('y_bottom', pos/100)
             self.refresh()
 
-        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
+        self.setWinControl(self._name + " " + self._win_Ctrl)
 
         cv2.createTrackbar('x_up', self._win_Ctrl, int(x_up*100), 50, onChangeXUp)
         cv2.createTrackbar('x_bottom', self._win_Ctrl, int(x_bottom*100), 50, onChangeXBottom)
         cv2.createTrackbar('y_up', self._win_Ctrl, int(y_up*100), 100, onChangeYUp)
         cv2.createTrackbar('y_bottom', self._win_Ctrl, int(y_bottom*100), 50, onChangeYBottom)
-
-        #self._render()
-
 
     def xUp(self):
         return int(self.xUpPercent() * self._xsize)
@@ -251,6 +279,18 @@ class RegionMask (ImageProcessor):
 
     def yBottomPercent(self):
         return self.getParameter('y_bottom')
+
+    def imageInfo (self):
+        image_info = self._image_info
+        if image_info is None:  #No image info passed to it.
+            image_info = {}
+
+        image_info['y_up']=self._ysize - self.yUp()
+        image_info['y_bottom']=self._ysize - self.yBottom()
+        image_info['x_up']=self.xUp()
+        image_info['x_bottom']=self.xBottom()
+
+        return image_info
 
     def vertices(self):
         ysize = self._ysize
@@ -292,7 +332,7 @@ class RegionMask (ImageProcessor):
 
 
     def _render(self):
-        cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
+        self.setWindow(self._name)
 
         self._processed_image = self.region_of_interest()
         region_selected = np.copy(self._processed_image)
@@ -310,6 +350,12 @@ class HoughLines (ImageProcessor):
                             min_line_length = 4, max_line_gap = 47, line_thickness = 2):
                             
         super().__init__(name, image, on_image_change)
+
+        self._m_list_l = np.zeros(0)  #Buffer of last left lines slop m
+        self._c_list_l = np.zeros(0)  #Buffer of last left lines c constant
+        self._m_list_r = np.zeros(0)  #Buffer of last right lines slop m
+        self._c_list_r = np.zeros(0)  #Buffer of last right lines c constant
+        self._buffer_len = 40       # size of the buffers
 
         self.setParameter('rho', rho)
         self.setParameter('theta', theta)
@@ -349,8 +395,7 @@ class HoughLines (ImageProcessor):
             self.setParameter('line_thickness', pos)
             self.refresh()
 
-        # cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
-        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_AUTOSIZE)
+        self.setWinControl(self._name + " " + self._win_Ctrl)
 
         cv2.createTrackbar('rho', self._win_Ctrl, rho, 10, onchangeRho)
         cv2.createTrackbar('theta', self._win_Ctrl, theta, 45, onchangeTheta)
@@ -358,8 +403,6 @@ class HoughLines (ImageProcessor):
         cv2.createTrackbar('min_line_length', self._win_Ctrl, min_line_length, 100, onchangeMinLineLength)
         cv2.createTrackbar('max_line_gap', self._win_Ctrl, max_line_gap, 100, onchangeMaxLineLength)
         cv2.createTrackbar('line_thickness', self._win_Ctrl, line_thickness, 10, onchangeLineThickness)
-
-        # self._render()
 
     # The resolution of the parameter r in pixels. We use 1 pixe
     def rho(self):
@@ -388,6 +431,29 @@ class HoughLines (ImageProcessor):
     def lineThickness (self):
         return self.getParameter('line_thickness')
 
+    """
+    Got the color of the line based on the slop of this line
+    This is used for debugging purpose.
+    """
+    def getlineColor (self, x1,y1,x2,y2):
+        pos_big_color = [255, 255, 0]
+        pos_les_color = [255, 255, 255]
+        neg_big_color = [0, 0, 255]
+        neg_les_color = [0, 255, 0]
+        color = pos_les_color
+
+        slop = (y2-y1)/(x2-x1)
+        if slop >= 0 and abs (slop) >= 1:
+            color = pos_big_color
+        elif slop >= 0 and abs (slop) < 1:
+            color = pos_les_color
+        elif slop < 0 and abs (slop) >= 1:
+            color = neg_big_color
+        elif slop < 0 and abs (slop) < 1:
+            color = neg_les_color
+        
+        return color
+
     def draw_lines(self, img, lines, color=[255, 255, 0], thickness=2):
         """       
         This function draws `lines` with `color` and `thickness`.    
@@ -395,10 +461,14 @@ class HoughLines (ImageProcessor):
         If you want to make the lines semi-transparent, think about combining
         this function with the weighted_img() function below
         """
+        if lines is None:
+            return
+
         for line in lines:
             for x1,y1,x2,y2 in line:
                 try:
                     if thickness > 0:
+                        # cv2.line(img, (x1, y1), (x2, y2), self.getlineColor(x1,y1,x2,y2), thickness)
                         cv2.line(img, (x1, y1), (x2, y2), color, thickness)
                 except:
                     logger.debug ("Draw line failed, x1, y1: %s, %s - x2, y2: %s, %s", x1, y1, x2, y2)
@@ -428,24 +498,51 @@ class HoughLines (ImageProcessor):
         ysize = self._ysize
         xsize = self._xsize
 
-        for line in lines:
-            for x1,y1,x2,y2 in line:
-                slop = (y2-y1)/(x2-x1)
-                if left_line and slop < 0 and x1 < xsize/2 and x2 < xsize/2 : # -ve slop is left line
-                    x_points[0].append (x1)
-                    x_points[0].append (x2)
-                    y_points[0].append (y1)
-                    y_points[0].append (y2)
-                elif not left_line and slop >= 0 and x1 >= xsize/2 and x2 >= xsize/2 : # +ve slop is right line
-                    x_points[0].append (x1)
-                    x_points[0].append (x2)
-                    y_points[0].append (y1)
-                    y_points[0].append (y2)
+        if lines is not None:
+            for line in lines:
+                for x1,y1,x2,y2 in line:
+                    try:
+                        slop = (y2-y1)/(x2-x1)
+                        if left_line and slop < 0 and x1 < xsize/2 and x2 < xsize/2: # -ve slop is left line and where y > x
+                            x_points[0].append (x1)
+                            x_points[0].append (x2)
+                            y_points[0].append (y1)
+                            y_points[0].append (y2)
+                        elif not left_line and slop >= 0 and x1 >= xsize/2 and x2 >= xsize/2: # +ve slop is right line and where y > x
+                            x_points[0].append (x1)
+                            x_points[0].append (x2)
+                            y_points[0].append (y1)
+                            y_points[0].append (y2)
+                    except:
+                        logger.debug ("invalid slop, x1, y1: %s, %s - x2, y2: %s, %s", x1, y1, x2, y2)
         
         # Identify left line
         line = None
+
+        if left_line:
+            m_list = self._m_list_l
+            c_list = self._c_list_l
+        else:
+            m_list = self._m_list_r
+            c_list = self._c_list_r
+
+
+        y_bottom = self._image_info['y_bottom']
+        y_up = self._image_info['y_up']
+
+        x_bottom = self._image_info['x_bottom']
+        x_up = self._image_info['x_up']
+        x_bottom_l, x_bottom_r = xsize/2 - x_bottom, xsize/2 + x_bottom
+        x_up_l, x_up_r = xsize/2 - x_up, xsize/2 + x_up
+
         x = np.array(x_points[0])
         y = np.array(y_points[0])
+
+        # y_bottom = ysize -1
+        # y_up = min(y)
+
+        m, c = None, None
+
         if len(x) > 0 and len (y) > 0:
             line_fit = np.polyfit(x, y, 1)
         
@@ -453,8 +550,49 @@ class HoughLines (ImageProcessor):
             # x = (y - c)/m 
             # So we get x at the point in the image = ysize -1 to draw complete lines
             m, c = line_fit
-            line = np.array([int((ysize -1 -c)/m), ysize -1, int((min(y) -c)/m), min(y)])
+
+            in_range = False
+            x1 = int((y_bottom -c)/m)
+            x2 = int((y_up -c)/m)
+            
+            if x1 >= x_bottom_l and x1 <= x_bottom_r and x2 >= x_up_l and x2 <= x_up_r:
+                in_range = True
+
+            if in_range:    
+                # Save both m an c in a buffer
+                m_list = np.insert(m_list, 0, m)
+                c_list = np.insert(c_list, 0, c)
+
+                if len(m_list) > self._buffer_len:
+                    m_list = np.delete(m_list, -1)
+                    c_list = np.delete(c_list, -1)
+                
+                # get the avarage of the list as the new value of m & c
+                m = np.mean(m_list)
+                c = np.mean(c_list)
+
+                if left_line: # Keep the updated arrays 
+                    self._m_list_l = m_list
+                    self._c_list_l = c_list
+                else:
+                    self._m_list_r = m_list
+                    self._c_list_r = c_list
+
+            elif len(m_list) > 0: # ignore the values of this line and use the last values
+                m = np.mean(m_list)
+                c = np.mean(c_list)
+
+            if m is not None:
+                line = np.array([int((y_bottom -c)/m), y_bottom, int((y_up -c)/m), y_up])
         
+        elif len(m_list) > 0:
+            m = np.mean(m_list)
+            c = np.mean(c_list)
+            line = np.array([int((y_bottom -c)/m), y_bottom, int((y_up -c)/m), y_up])
+        
+        if line is None:
+            logger.debug ("No line for input lines: %s and left_line is: %s", lines, left_line)
+
         return line
    
     
@@ -491,7 +629,7 @@ class HoughLines (ImageProcessor):
         self.draw_lines (img, lane_lines, color, self.lineThickness())
 
     def _render(self):
-        cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
+        self.setWindow(self._name)
 
         # Make a blank the same size as our image to draw on
         line_imge = np.zeros((self._ysize, self._xsize, 3), dtype=np.uint8)
@@ -501,9 +639,8 @@ class HoughLines (ImageProcessor):
         lines = cv2.HoughLinesP(self.image, self.rho(), self.theta(), self.threshold(), np.array([]),
                                     self.minLineLength(), self.maxLineGap())
 
-        if lines is not None:
-            self.draw_lines(line_imge, lines)
-            self.draw_lane (line_imge, lines)
+        self.draw_lines(line_imge, lines)
+        self.draw_lane (line_imge, lines)
 
         #Fix the colors
         r, g, b = cv2.split (line_imge)
@@ -537,14 +674,11 @@ class ImageBlender (ImageProcessor):
             self.setParameter('gamma', pos / 10)
             self.refresh()
 
-        cv2.namedWindow(self._win_Ctrl, cv2.WINDOW_NORMAL)
-
+        self.setWinControl(self._name + " " + self._win_Ctrl)
+ 
         cv2.createTrackbar('alpha', self._win_Ctrl, int(alpha * 10), 10, onchangeAlpha)
         cv2.createTrackbar('beta', self._win_Ctrl, int(beta * 10), 10, onchangeBeta)
         cv2.createTrackbar('gamma', self._win_Ctrl, int(gamma * 10), 10, onchangeGamma)
-
-        # self._render()
-
 
     def alpha(self):
         return self.getParameter('alpha')
@@ -563,10 +697,44 @@ class ImageBlender (ImageProcessor):
        for key in config:
         cv2.setTrackbarPos(key, self._win_Ctrl, int (config[key] * 10))     
 
+    def getImageInfo (self, key):
+        if self._image_info is not None and key in self._image_info:
+            return str(self._image_info[key])
+        else:
+            return "NA"
+
+    def showImageInfo (self, image):
+        # describe the type of font 
+        # to be used. 
+        font = cv2.FONT_HERSHEY_SIMPLEX 
+        
+        file = self.getImageInfo('file')
+        frame = self.getImageInfo('frame')
+        frames_num = self.getImageInfo('frames_num')
+        wait_time = self.getImageInfo('wait_time')
+
+        image_info = {'file': file, 'frame': frame + "/" + frames_num, 'wait time': wait_time}
+        
+        i, y0, dy = 0, 50, 30
+        if image_info is not None:
+            for key, value in image_info.items():
+                y = y0 + i*dy
+                i+=1
+                # Use putText() method for 
+                # inserting text on video 
+                cv2.putText(image,  
+                            str(key) + ": " + str(value),  
+                            (50, y),  
+                            font, 1,  
+                            (255, 255, 255),  
+                            2,  
+                            cv2.LINE_8) 
+
     def _render(self):
         base_image = self._pipline.getImage()
-        cv2.namedWindow(self._name, cv2.WINDOW_KEEPRATIO)
+        self.setWindow(self._name)
 
+        self.showImageInfo (base_image)
         self._processed_image = cv2.addWeighted(base_image, self.alpha(), self.image, self.beta(), self.gamma())
         cv2.imshow(self._name, self._processed_image)
 
