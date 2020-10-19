@@ -63,7 +63,9 @@ And in the case of the video tool ..
 which is having the exact arguments that I can use in the same way explained up.
 
 ### Key Controls
+
 To review the video and identify the different frames that are having distortion and needs special paramter tuning you may need to fast / slow / stop / resume the video to be able to navigate through the different framse, you can do that by using the floowing keys
+
 <center>
 
 | Key | Action        |
