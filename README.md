@@ -8,7 +8,7 @@ The steps are color selection, region of interest selection, grayscaling, Gaussi
 
 I started from this tool and built on the idea to have a GUI for tuning each step of the pipeline and you can even build your own pipeline. Here is a video to explain the tool.
 
-[![video to explain the tool](doc_images\video_thumpnail.PNG)][2]
+[![video to explain the tool](doc_images/video_thumpnail.PNG)][2]
 
 ## The Design
 The highlevel design diagram for the tool is depending on constructing a pipeline of different processors. Each processor is having an image as input and image as output. The input of one processor is the output of the previous processor of the chain as explained in the diagram below:
@@ -64,6 +64,7 @@ which is having the exact arguments that I can use in the same way explained up.
 
 ### Key Controls
 To review the video and identify the different frames that are having distortion and needs special paramter tuning you may need to fast / slow / stop / resume the video to be able to navigate through the different framse, you can do that by using the floowing keys
+<center>
 
 | Key | Action        |
 | :---: | ------------- |
@@ -73,6 +74,7 @@ To review the video and identify the different frames that are having distortion
 | D | Make video slower with 10 ms |
 | Q | Quit the application |
 
+</center>
 In case of showing image only, you can just hit any key to quit.
 
 ## Tool Configuration and Saving the Configuration
