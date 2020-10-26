@@ -111,7 +111,6 @@ class OriginalImage (ImageProcessor):
 
         
     def _render(self):
-        # Convert it to Grayscale
         self.setWindow(self._name)
 
         self._processed_image = self.image    
@@ -346,7 +345,7 @@ class RegionMask (ImageProcessor):
 #       HoughLines
 ###################################
 class HoughLines (ImageProcessor):
-    def __init__(self, name, image=None, on_image_change=None, rho=1, theta=1, threshold=7, \
+    def __init__(self, name, image=None, on_image_change=None, buffer_len = 40, rho=1, theta=1, threshold=7, \
                             min_line_length = 4, max_line_gap = 47, line_thickness = 2):
                             
         super().__init__(name, image, on_image_change)
@@ -355,7 +354,7 @@ class HoughLines (ImageProcessor):
         self._c_list_l = np.zeros(0)  #Buffer of last left lines c constant
         self._m_list_r = np.zeros(0)  #Buffer of last right lines slop m
         self._c_list_r = np.zeros(0)  #Buffer of last right lines c constant
-        self._buffer_len = 40       # size of the buffers
+        self._buffer_len = buffer_len       # size of the buffers
 
         self.setParameter('rho', rho)
         self.setParameter('theta', theta)

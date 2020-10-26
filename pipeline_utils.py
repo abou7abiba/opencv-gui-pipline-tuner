@@ -107,7 +107,7 @@ class FindLanesPipeline (ImageProcessorPipeline):
         self.addProcessor (SmoothImage('Bluring Config', average_filter_size=5, gaussian_filter_size=1, median_filter_size=1, bilateral_filter_size=1))
         self.addProcessor (EdgeFinder('Edge Finder Config', min_threshold=28, max_threshold=115))
         self.addProcessor (RegionMask('Region Masked dimensions'))
-        self.addProcessor (HoughLines('Hough Lines Config'))        
+        self.addProcessor (HoughLines('Hough Lines Config', buffer_len = 1))        
         self.addProcessor (ImageBlender('Image Mix Config'))
 
         if self._config:
@@ -118,8 +118,9 @@ class FindLanesPipeline (ImageProcessorPipeline):
 
         image = cv2.imread(self._in_filename)
         if image is not None:   
+            image_info ={'file': self._in_filename, 'frame':0, 'frames_num': 0, 'wait_time':0}
             cv2.imshow('input', image)
-            self.setImage(image)
+            self.setImage(image, image_info)
         else:
             raise AttributeError ("input file is not an image file", self._in_filename)
         

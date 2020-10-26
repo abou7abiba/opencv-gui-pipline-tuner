@@ -12,9 +12,9 @@
             "program": "${file}",
             "console": "integratedTerminal",
             // "args": ["test_videos//challenge.mp4", "-c", "output_videos//challenge-config.json", "-o", "output_videos", "-d"]
-            "args": ["test_videos//solidYellowLeft.mp4", "-c", "pipeline-config.json", "-o", "output_videos", "--debug"]
+            "args": ["test_videos//solidYellowLeft.mp4", "-c", "output_videos//solidYellowLeft-config.json", "-o", "output_videos", "--debug"]
             // "args": ["test_images//challenge_Moment_1.jpg"]
-            // "args": ["test_images//challenge_Moment_1.jpg", "-c", "output_videos//challenge-config.json", "--debug"]
+            // "args": ["test_images//whiteCarLaneSwitch.jpg", "-c", "output_images//solidYellowLeft-config.json", "--debug"]
             // "args": ["test_images//challenge_Moment_1.jpg", "-c", "output_images//challenge_Moment_1-config.json", "--debug"]
             //"args": ["-h"]
         }
