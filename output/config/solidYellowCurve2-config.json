@@ -1,0 +1,31 @@
+{
+    "SmoothImage": {
+        "average_filter_size": 7,
+        "gaussian_filter_size": 1,
+        "median_filter_size": 1,
+        "bilateral_filter_size": 1
+    },
+    "EdgeFinder": {
+        "min_threshold": 58,
+        "max_threshold": 136
+    },
+    "RegionMask": {
+        "x_up": 0.06,
+        "x_bottom": 0.42,
+        "y_up": 0.37,
+        "y_bottom": 0.02
+    },
+    "HoughLines": {
+        "rho": 2,
+        "theta": 1,
+        "threshold": 7,
+        "min_line_length": 4,
+        "max_line_gap": 9,
+        "line_thickness": 9
+    },
+    "ImageBlender": {
+        "alpha": 0.9,
+        "beta": 1.0,
+        "gamma": 1.0
+    }
+}
